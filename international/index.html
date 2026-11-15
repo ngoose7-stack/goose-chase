@@ -245,8 +245,8 @@ function newGame(mode,seed){
   S={mode,seed,target,start,cur:start,perk:false,visited:new Set([start.i]),flights:[],total:0,miss:0,hints:[],
      known:{len:null,prefix:'',suffix:'',pos:{},continent:null,country:null},
      b:{minLat:-90,maxLat:90,minLon:-180,maxLon:180,src:{}},done:false,won:false};
-  const first=clueFor(start);
-  S.flights.push({city:start,dist:0,start:true,...first});
+  
+  S.flights.push({city:start,dist:0,start:true,type:'start',text:'Your starting point. No clues here, so take off!'});
   if(mode==='daily'){const saved=store.get('fp-daily-'+seed);if(saved&&saved.moves){replay(saved.moves);}}else{const c=store.get(PFX+'cur');if(c&&c.mode==='random'&&c.seed===seed&&c.moves)replay(c.moves);}
   S.log=S.log||[];store.set(PFX+'cur',{mode,seed,moves:S.log,done:S.done});
   document.getElementById('pid').textContent=mode==='daily'?`${new Date().toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})}`:'Random puzzle';
