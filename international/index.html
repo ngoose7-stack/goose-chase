@@ -304,7 +304,7 @@ function finishIfDone(){if(!S.done)return;
     if(st.last!==S.seed){st.played++;if(S.won){st.wins++;st.streak=(st.last===S.seed-1?st.streak:0)+1}else st.streak=0;st.last=S.seed;store.set('fp-stats',st)}}
   setTimeout(showEnd,700)}
 
-const HALF=8500;
+const HALF=13000;
 function acc(){if(S.done&&!S.won)return 0;return Math.round(100*Math.pow(.5,S.miss/HALF))}
 // ---------- render ----------
 const $=id=>document.getElementById(id);
