@@ -189,7 +189,8 @@ h3{margin:0 0 10px;font:600 13px Nunito;text-transform:uppercase;letter-spacing:
   <h2 id="endTitle"></h2>
   <p id="endSub"></p>
   <div class="big"><div><b id="eF"></b><small>flights</small></div><div><b id="eD"></b><small>total miss (mi)</small></div><div><b id="eA"></b><small>accuracy</small></div></div>
-  <div class="lb" id="lbBox"><h4 id="lbTitle">Today's top 5</h4><ol id="lbList"></ol><div class="lbnote" id="lbNote"></div></div>
+  <div><div class="lb" id="lbBox"><h4>Daily puzzle: today's top 5</h4><ol id="lbList"></ol><div class="lbnote" id="lbNote"></div></div>
+  <div class="lb" id="lbBox2"><h4>Random puzzles: today's top 5</h4><ol id="lbList2"></ol><div class="lbnote" id="lbNote2"></div></div></div>
   <div class="submitbox" id="submitBox">
     <label for="pname" id="pnameLbl">🎉 You made today's top 5!</label>
     <div class="flyrow"><input id="pname" maxlength="24" placeholder="Your name" autocomplete="nickname"><button id="submitLink" class="fly" type="button">Save name</button></div>
@@ -446,36 +447,42 @@ const RESP='https://docs.google.com/forms/d/e/1FAIpQLSeNNFuxrrusxPDy1lIKeU0oxVqc
 function chk(t){let h=5381;for(const c of t+'|fp-salt-7q')h=((h<<5)+h+c.charCodeAt(0))>>>0;return h.toString(36).slice(-4).toUpperCase()}
 function myRow(){return{a:acc(),m:Math.round(S.miss),f:S.flights.filter(f=>f.city&&!f.start).length,h:S.hints.filter(h=>h!=='giveup').length}}
 function scoreLine(id){const r=myRow();
-  const base=`${GAME} #${S.seed} · ${new Date().toLocaleDateString('en-CA')} · ${r.a}% accuracy · ${fmt(r.m)} mi total miss · ${r.f} flight${r.f===1?'':'s'} · ${r.h} hint${r.h===1?'':'s'}`;
+  const base=`${GAME} ${S.mode==='daily'?'':'Random '}#${S.seed} · ${new Date().toLocaleDateString('en-CA')} · ${r.a}% accuracy · ${fmt(r.m)} mi total miss · ${r.f} flight${r.f===1?'':'s'} · ${r.h} hint${r.h===1?'':'s'}`;
   return base+' · code '+chk(base)+(id?' · id '+id:'')}
 const better=(x,y)=>x.a!==y.a?x.a>y.a:x.f!==y.f?x.f<y.f:x.h!==y.h?x.h<y.h:x.m<y.m;
-function todayBoard(){const B=window.BOARD||{};return B.puzzle===todayNum()&&Array.isArray(B.top)?B.top.slice(0,5):[]}
-function qualifies(){if(S.mode!=='daily'||!S.won)return false;const t=todayBoard();return t.length<5||better(myRow(),t[t.length-1])}
+const sortB=a=>a.sort((x,y)=>better(x,y)?-1:better(y,x)?1:0);
+const todayStr=()=>new Date().toLocaleDateString('en-CA');
+window.BOARDS={daily:{key:null,top:[]},random:{key:null,top:[]}};
+const bkey=m=>m==='daily'?'d'+todayNum():'r'+todayStr();
+function boardOf(m){const B=window.BOARDS[m];return B.key===bkey(m)?B.top.slice(0,5):[]}
+function todayBoard(){return boardOf(S.mode)}
+function qualifies(){if(!S.won)return false;const t=todayBoard();return t.length<5||better(myRow(),t[t.length-1])}
 const SHEET_CSV='https://docs.google.com/spreadsheets/d/1Kx7YvshBAUMN6WERxuwQye_ha9Jb_fA2xGlR_y87fQU/gviz/tq?tqx=out:csv&sheet=Form%20Responses%201';
 const POST_URL='https://docs.google.com/forms/d/e/1FAIpQLSeNNFuxrrusxPDy1lIKeU0oxVqc325ybY0m5FUUC8ClbfaymQ/formResponse';
 function parseCSV(t){const rows=[];let row=[],f='',q=false;for(let i=0;i<t.length;i++){const c=t[i];
   if(q){if(c==='"'){if(t[i+1]==='"'){f+='"';i++}else q=false}else f+=c}
   else if(c==='"')q=true;else if(c===','){row.push(f);f=''}else if(c==='\n'){row.push(f);rows.push(row);row=[];f=''}else if(c!=='\r')f+=c}
   if(f||row.length){row.push(f);rows.push(row)}return rows}
-const RX=/^(World|USA) #(\d+) · (\d{4}-\d\d-\d\d) · (\d+)% accuracy · ([\d,]+) mi total miss · (\d+) flights? · (\d+) hints? · code (\w{4})(?: · id (\w+))?$/;
+const RX=/^(World|USA) (Random )?#(\d+) · (\d{4}-\d\d-\d\d) · (\d+)% accuracy · ([\d,]+) mi total miss · (\d+) flights? · (\d+) hints? · code (\w{4})(?: · id (\w+))?$/;
 let boardStatus='idle';
 async function loadBoard(){boardStatus='loading';
   try{const r=await fetch(SHEET_CSV+'&t='+Date.now());if(!r.ok)throw 0;const rows=parseCSV(await r.text()).slice(1);
-    const ents=[],byId={};
+    const ents={daily:[],random:[]},byId={};
     for(const [ts,name,score] of rows){const sc=(score||'').trim(),m=RX.exec(sc);if(!m)continue;
-      if(chk(sc.split(' · code ')[0])!==m[8])continue;
-      if(m[1]!==GAME||+m[2]!==todayNum())continue;
-      const n=(name||'').replace(/[^\p{L}\p{N} .'\-]/gu,'').trim().slice(0,24)||'Anonymous',id=m[9]||null;
-      const row={n,a:+m[4],m:+m[5].replace(/,/g,''),f:+m[6],h:+m[7],id};
-      if(id&&byId[id]){byId[id].n=n;continue}if(id)byId[id]=row;ents.push(row)}
-    const seen=new Set(),top=[];
-    for(const r of ents){const k=r.n.toLowerCase();if(r.n!=='Anonymous'){if(seen.has(k))continue;seen.add(k)}top.push(r)}
-    top.sort((x,y)=>better(x,y)?-1:better(y,x)?1:0);
-    window.BOARD={puzzle:todayNum(),top:top.slice(0,5)};boardStatus='ok'}catch(e){boardStatus='error'}}
+      if(chk(sc.split(' · code ')[0])!==m[9])continue;if(m[1]!==GAME)continue;
+      const mode=m[2]?'random':'daily';
+      if(mode==='daily'&&+m[3]!==todayNum())continue;if(mode==='random'&&m[4]!==todayStr())continue;
+      const n=(name||'').replace(/[^\p{L}\p{N} .'\-]/gu,'').trim().slice(0,24)||'Anonymous',id=m[10]||null;
+      const row={n,a:+m[5],m:+m[6].replace(/,/g,''),f:+m[7],h:+m[8],id};
+      if(id&&byId[id]){byId[id].n=n;continue}if(id)byId[id]=row;ents[mode].push(row)}
+    // daily: each named player's first score; random: each named player's best score
+    const dSeen=new Set(),dTop=[];for(const r of ents.daily){const k=r.n.toLowerCase();if(r.n!=='Anonymous'){if(dSeen.has(k))continue;dSeen.add(k)}dTop.push(r)}
+    const best={},rTop=[];for(const r of sortB(ents.random.slice())){const k=r.n.toLowerCase();if(r.n!=='Anonymous'){if(best[k])continue;best[k]=1}rTop.push(r)}
+    window.BOARDS={daily:{key:bkey('daily'),top:sortB(dTop).slice(0,5)},random:{key:bkey('random'),top:rTop.slice(0,5)}};boardStatus='ok'}catch(e){boardStatus='error'}}
 function updSubmit(){}
-const entryKey=()=>PFX+'entry-'+S.seed;
+const entryKey=()=>S.mode==='daily'?PFX+'entry-'+S.seed:PFX+'rentry-'+S.seed;
 async function postScore(name,id){await fetch(POST_URL,{method:'POST',mode:'no-cors',body:new URLSearchParams({'entry.1420984043':name,'entry.927338116':scoreLine(id)})})}
-async function autoSubmit(){if(S.mode!=='daily'||!S.won||store.get(entryKey())||!qualifies())return;
+async function autoSubmit(){if(!S.won||store.get(entryKey())||!qualifies())return;
   const id=Math.random().toString(36).slice(2,10),name=store.get('fp-name')||'Anonymous';
   store.set(entryKey(),{id,name});renderBoard();
   try{await postScore(name,id);setTimeout(async()=>{await loadBoard();renderBoard()},2500)}catch(e){store.set(entryKey(),null);renderBoard()}}
@@ -485,17 +492,20 @@ $('submitLink').addEventListener('click',async()=>{const n=$('pname').value.trim
   try{await postScore(n,en.id);store.set('fp-name',n);store.set(entryKey(),{id:en.id,name:n});btn.disabled=false;btn.textContent='Save name';$('subNote').textContent='✓ Saved as '+n+'.';renderBoard();setTimeout(async()=>{await loadBoard();renderBoard()},2500)}
   catch(e){btn.disabled=false;btn.textContent='Save name';$('subNote').textContent="Couldn't save. Check your connection and try again."}
 });
-function renderBoard(){const t=todayBoard(),me=myRow(),en=S.mode==='daily'&&S.won?store.get(entryKey()):null;
-  const rows=t.map(r=>({...r}));
-  if(en){const mine=rows.find(r=>r.id===en.id);if(mine){mine.me=1;mine.n=en.name}else{rows.push({n:en.name,...me,id:en.id,me:1});rows.sort((x,y)=>better(x,y)?-1:better(y,x)?1:0)}}
-  const ol=$('lbList');ol.textContent='';
+function fillList(ol,rows){ol.textContent='';
   rows.slice(0,5).forEach(r=>{const li=document.createElement('li');if(r.me)li.className='me';const b=document.createElement('b');b.textContent=(r.n||'Anonymous')+(r.me?' (you)':'');li.append(b,` · ${r.a}% · ${r.f} flight${r.f===1?'':'s'} · ${fmt(r.m)} mi`);ol.append(li)});
-  if(!rows.length){const li=document.createElement('li');li.textContent='No scores posted yet today.';li.style.listStyle='none';ol.append(li)}
-  $('lbNote').textContent=!en&&t.length>=5&&!qualifies()&&S.won?`Cutoff to make the board: ${t[4].a}% (${t[4].f} flight${t[4].f===1?'':'s'}).`:'';
+  if(!rows.length){const li=document.createElement('li');li.textContent='No scores posted yet today.';li.style.listStyle='none';ol.append(li)}}
+function renderBoard(){const me=myRow(),en=S.won?store.get(entryKey()):null,cur=S.mode==='daily'?'daily':'random',other=cur==='daily'?'random':'daily';
+  const box={daily:$('lbBox'),random:$('lbBox2')},list={daily:$('lbList'),random:$('lbList2')},note={daily:$('lbNote'),random:$('lbNote2')};
+  box[cur].parentNode.insertBefore(box[cur],box[other]);
+  const t=boardOf(cur),rows=t.map(r=>({...r}));
+  if(en){const mine=rows.find(r=>r.id===en.id);if(mine){mine.me=1;mine.n=en.name}else{rows.push({n:en.name,...me,id:en.id,me:1});sortB(rows)}}
+  fillList(list[cur],rows);fillList(list[other],boardOf(other));
+  note[cur].textContent=!en&&t.length>=5&&!qualifies()&&S.won?`Cutoff to make the board: ${t[4].a}% (${t[4].f} flight${t[4].f===1?'':'s'}).`:'';
+  note[other].textContent=other==='daily'?"Play today's daily puzzle for a shot at this board.":'Play a random puzzle for a shot at this board.';
   $('submitBox').style.display=en?'block':'none';
-  if(en){$('pnameLbl').textContent=en.name==='Anonymous'?"🎉 You made today's top 5! You're on the board as Anonymous. Add your name:":"🎉 You made today's top 5! Change your name if you like:";if(document.activeElement!==$('pname')&&!$('pname').value)$('pname').value=en.name==='Anonymous'?'':en.name}
-  $('lbTitle').textContent=S.mode==='daily'?"Today's top 5":"Today's daily puzzle: top 5";if(S.mode!=='daily')$('lbNote').textContent="Play today's daily puzzle for a shot at the board.";
-  if(boardStatus==='loading'&&!rows.length)$('lbNote').textContent='Loading leaderboard…';if(boardStatus==='error')$('lbNote').textContent="Couldn't load the leaderboard right now."}
+  if(en){$('pnameLbl').textContent=(en.name==='Anonymous'?`🎉 You made the ${cur} top 5! You're on the board as Anonymous. Add your name:`:`🎉 You made the ${cur} top 5! Change your name if you like:`);if(document.activeElement!==$('pname')&&!$('pname').value)$('pname').value=en.name==='Anonymous'?'':en.name}
+  if(boardStatus==='loading'){if(!rows.length)note[cur].textContent='Loading leaderboard…'}if(boardStatus==='error')note[cur].textContent="Couldn't load the leaderboard right now."}
 function showEnd(){const nf=S.flights.filter(f=>f.city&&!f.start).length;
   $('endTitle').textContent=S.won?'You found it! 🎯':'So close…';
   $('endSub').innerHTML=`The mystery city was <b>${S.target.name}</b>, ${S.target.country}.`;
