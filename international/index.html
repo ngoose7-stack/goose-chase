@@ -189,7 +189,7 @@ h3{margin:0 0 10px;font:600 13px Nunito;text-transform:uppercase;letter-spacing:
   <h2 id="endTitle"></h2>
   <p id="endSub"></p>
   <div class="big"><div><b id="eF"></b><small>flights</small></div><div><b id="eD"></b><small>total miss (mi)</small></div><div><b id="eA"></b><small>accuracy</small></div></div>
-  <div class="lb" id="lbBox"><h4>Today's top 5</h4><ol id="lbList"></ol><div class="lbnote" id="lbNote"></div></div>
+  <div class="lb" id="lbBox"><h4 id="lbTitle">Today's top 5</h4><ol id="lbList"></ol><div class="lbnote" id="lbNote"></div></div>
   <div class="submitbox" id="submitBox">
     <label for="pname" id="pnameLbl">🎉 You made today's top 5!</label>
     <div class="flyrow"><input id="pname" maxlength="24" placeholder="Your name" autocomplete="nickname"><button id="submitLink" class="fly" type="button">Save name</button></div>
@@ -449,7 +449,7 @@ function scoreLine(id){const r=myRow();
   const base=`${GAME} #${S.seed} · ${new Date().toLocaleDateString('en-CA')} · ${r.a}% accuracy · ${fmt(r.m)} mi total miss · ${r.f} flight${r.f===1?'':'s'} · ${r.h} hint${r.h===1?'':'s'}`;
   return base+' · code '+chk(base)+(id?' · id '+id:'')}
 const better=(x,y)=>x.a!==y.a?x.a>y.a:x.f!==y.f?x.f<y.f:x.h!==y.h?x.h<y.h:x.m<y.m;
-function todayBoard(){const B=window.BOARD||{};return B.puzzle===S.seed&&Array.isArray(B.top)?B.top.slice(0,5):[]}
+function todayBoard(){const B=window.BOARD||{};return B.puzzle===todayNum()&&Array.isArray(B.top)?B.top.slice(0,5):[]}
 function qualifies(){if(S.mode!=='daily'||!S.won)return false;const t=todayBoard();return t.length<5||better(myRow(),t[t.length-1])}
 const SHEET_CSV='https://docs.google.com/spreadsheets/d/1Kx7YvshBAUMN6WERxuwQye_ha9Jb_fA2xGlR_y87fQU/gviz/tq?tqx=out:csv&sheet=Form%20Responses%201';
 const POST_URL='https://docs.google.com/forms/d/e/1FAIpQLSeNNFuxrrusxPDy1lIKeU0oxVqc325ybY0m5FUUC8ClbfaymQ/formResponse';
@@ -459,19 +459,19 @@ function parseCSV(t){const rows=[];let row=[],f='',q=false;for(let i=0;i<t.lengt
   if(f||row.length){row.push(f);rows.push(row)}return rows}
 const RX=/^(World|USA) #(\d+) · (\d{4}-\d\d-\d\d) · (\d+)% accuracy · ([\d,]+) mi total miss · (\d+) flights? · (\d+) hints? · code (\w{4})(?: · id (\w+))?$/;
 let boardStatus='idle';
-async function loadBoard(){if(S.mode!=='daily')return;boardStatus='loading';
+async function loadBoard(){boardStatus='loading';
   try{const r=await fetch(SHEET_CSV+'&t='+Date.now());if(!r.ok)throw 0;const rows=parseCSV(await r.text()).slice(1);
     const ents=[],byId={};
     for(const [ts,name,score] of rows){const sc=(score||'').trim(),m=RX.exec(sc);if(!m)continue;
       if(chk(sc.split(' · code ')[0])!==m[8])continue;
-      if(m[1]!==GAME||+m[2]!==S.seed)continue;
+      if(m[1]!==GAME||+m[2]!==todayNum())continue;
       const n=(name||'').replace(/[^\p{L}\p{N} .'\-]/gu,'').trim().slice(0,24)||'Anonymous',id=m[9]||null;
       const row={n,a:+m[4],m:+m[5].replace(/,/g,''),f:+m[6],h:+m[7],id};
       if(id&&byId[id]){byId[id].n=n;continue}if(id)byId[id]=row;ents.push(row)}
     const seen=new Set(),top=[];
     for(const r of ents){const k=r.n.toLowerCase();if(r.n!=='Anonymous'){if(seen.has(k))continue;seen.add(k)}top.push(r)}
     top.sort((x,y)=>better(x,y)?-1:better(y,x)?1:0);
-    window.BOARD={puzzle:S.seed,top:top.slice(0,5)};boardStatus='ok'}catch(e){boardStatus='error'}}
+    window.BOARD={puzzle:todayNum(),top:top.slice(0,5)};boardStatus='ok'}catch(e){boardStatus='error'}}
 function updSubmit(){}
 const entryKey=()=>PFX+'entry-'+S.seed;
 async function postScore(name,id){await fetch(POST_URL,{method:'POST',mode:'no-cors',body:new URLSearchParams({'entry.1420984043':name,'entry.927338116':scoreLine(id)})})}
@@ -494,13 +494,14 @@ function renderBoard(){const t=todayBoard(),me=myRow(),en=S.mode==='daily'&&S.wo
   $('lbNote').textContent=!en&&t.length>=5&&!qualifies()&&S.won?`Cutoff to make the board: ${t[4].a}% (${t[4].f} flight${t[4].f===1?'':'s'}).`:'';
   $('submitBox').style.display=en?'block':'none';
   if(en){$('pnameLbl').textContent=en.name==='Anonymous'?"🎉 You made today's top 5! You're on the board as Anonymous. Add your name:":"🎉 You made today's top 5! Change your name if you like:";if(document.activeElement!==$('pname')&&!$('pname').value)$('pname').value=en.name==='Anonymous'?'':en.name}
+  $('lbTitle').textContent=S.mode==='daily'?"Today's top 5":"Today's daily puzzle: top 5";if(S.mode!=='daily')$('lbNote').textContent="Play today's daily puzzle for a shot at the board.";
   if(boardStatus==='loading'&&!rows.length)$('lbNote').textContent='Loading leaderboard…';if(boardStatus==='error')$('lbNote').textContent="Couldn't load the leaderboard right now."}
 function showEnd(){const nf=S.flights.filter(f=>f.city&&!f.start).length;
   $('endTitle').textContent=S.won?'You found it! 🎯':'So close…';
   $('endSub').innerHTML=`The mystery city was <b>${S.target.name}</b>, ${S.target.country}.`;
   $('eF').textContent=nf;$('eD').textContent=fmt(S.miss);$('eA').textContent=acc()+'%';const nh=S.hints.filter(h=>h!=='giveup').length;if(nh)$('endSub').innerHTML+=` Hints used: ${nh}.`;
   const st=store.get('fp-stats');$('eStreak').textContent=S.mode==='daily'&&st?`Daily puzzles played: ${st.played} · Solved: ${st.wins} · Current streak: ${st.streak}`:'';
-  $('copyBtn').textContent='Copy result';$('lbBox').style.display=S.mode==='daily'?'block':'none';$('submitBox').style.display='none';if(S.mode==='daily'){$('pname').value='';$('subNote').textContent='Your score is already on the board. Adding a name is optional.';$('submitLink').disabled=false;$('submitLink').textContent='Save name';renderBoard();loadBoard().then(()=>{renderBoard();autoSubmit()})}$('endOv').classList.add('open')}
+  $('copyBtn').textContent='Copy result';$('lbBox').style.display='block';$('submitBox').style.display='none';{$('pname').value='';$('subNote').textContent='Your score is already on the board. Adding a name is optional.';$('submitLink').disabled=false;$('submitLink').textContent='Save name';renderBoard();loadBoard().then(()=>{renderBoard();autoSubmit()})}$('endOv').classList.add('open')}
 document.addEventListener('keydown',e=>{if(e.key!=='Enter'||e.repeat||!S||!S.done)return;if(e.target.closest&&e.target.closest('button,a,input'))return;if($('howOv').classList.contains('open'))return;e.preventDefault();$('endOv').classList.remove('open');newGame('random',Math.floor(Math.random()*1e9));setTimeout(()=>$('q').focus(),50)});
 $('copyBtn').onclick=async()=>{try{await navigator.clipboard.writeText(resultText());$('copyBtn').textContent='Copied!'}catch(e){$('copyBtn').textContent='Copy failed'}};
 
