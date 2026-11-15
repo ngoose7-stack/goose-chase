@@ -6,7 +6,7 @@
 <title>Goose Chase: USA</title>
 <script>window.BOARD={"puzzle":0,"top":[]};</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
   --ocean:#0f2236; --ocean2:#13293f; --land:#e9dcc2; --border:#c9b894;
@@ -14,10 +14,10 @@
   --accent:#e8652a; --accent2:#f2a33a; --good:#2f8f5b; --dir:#3b6fb6;
 }
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.45 Inter,system-ui,sans-serif}
+html,body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.45 Nunito,system-ui,sans-serif}
 button{font:inherit;cursor:pointer}
 header{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--line);background:#fff;flex-wrap:wrap}
-.logo{font:700 22px 'Space Grotesk',sans-serif;letter-spacing:-.5px;display:flex;align-items:center;gap:8px}
+.logo{font:700 22px Fredoka,sans-serif;letter-spacing:-.5px;display:flex;align-items:center;gap:8px}
 .logo span.dot{width:12px;height:12px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px #e8652a33}
 .puzzle-id{color:var(--muted);font-size:13px}
 .spacer{flex:1}
@@ -35,7 +35,7 @@ svg#map{display:block;width:100%;height:auto;touch-action:none}
 @media (max-width:640px){.panel{grid-template-columns:minmax(0,1fr);padding:10px;gap:10px}}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
 .status{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
-.status .where{font:600 16px 'Space Grotesk',sans-serif}
+.status .where{font:600 16px Fredoka,sans-serif}
 .stats{display:flex;gap:14px;font-size:13px;color:var(--muted)}
 .stats b{color:var(--ink);font-size:15px}
 .flyrow{display:flex;gap:8px;margin-top:10px;position:relative}
@@ -56,11 +56,11 @@ svg#map{display:block;width:100%;height:auto;touch-action:none}
 .hintmenu button{border:1px solid var(--line);background:#faf7f1;border-radius:8px;padding:6px 10px;font-size:13px}
 .hintmenu button:disabled{opacity:.45;cursor:default}
 .hintmenu .giveup{color:#b3261e;border-color:#f1c8c4;background:#fff6f5}
-h3{margin:0 0 10px;font:600 13px Inter;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+h3{margin:0 0 10px;font:600 13px Nunito;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
 .tiles{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px}
-.tile{width:28px;height:34px;border-radius:6px;border:1.5px solid var(--line);display:grid;place-items:center;font:700 17px 'Space Grotesk';background:#faf7f1}
+.tile{width:28px;height:34px;border-radius:6px;border:1.5px solid var(--line);display:grid;place-items:center;font:700 17px Fredoka;background:#faf7f1}
 .tile.k{background:var(--good);border-color:var(--good);color:#fff}
-.frag{font:700 18px 'Space Grotesk';letter-spacing:2px;margin-bottom:10px}
+.frag{font:700 18px Fredoka;letter-spacing:2px;margin-bottom:10px}
 .frag .q{color:#b9b0a0;letter-spacing:0;font-weight:500}
 .facts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px;font-size:14px}
 .facts li{display:flex;gap:8px;align-items:flex-start}
@@ -78,19 +78,19 @@ h3{margin:0 0 10px;font:600 13px Inter;text-transform:uppercase;letter-spacing:.
 .overlay{position:fixed;inset:0;background:#0b1622b3;display:none;place-items:center;z-index:50;padding:16px}
 .overlay.open{display:grid}
 .modal{background:#fff;border-radius:16px;max-width:460px;width:100%;padding:22px;max-height:90vh;overflow:auto}
-.modal h2{margin:0 0 6px;font:700 24px 'Space Grotesk'}
+.modal h2{margin:0 0 6px;font:700 24px Fredoka}
 .modal p{margin:8px 0}
 .modal ul{padding-left:18px;margin:8px 0}
 .modal li{margin:4px 0}
 .big{display:flex;gap:10px;margin:14px 0}
 .big div{flex:1;background:#faf7f1;border-radius:10px;padding:10px;text-align:center}
-.big b{display:block;font:700 22px 'Space Grotesk'}
+.big b{display:block;font:700 22px Fredoka}
 .big small{color:var(--muted)}
 .mrow{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
 .mrow button{flex:1;padding:10px;border-radius:10px;border:1px solid var(--line);background:#fff;font-weight:600}
 .mrow button.pri{background:var(--accent);color:#fff;border-color:var(--accent)}
 .lb{margin-top:14px;padding:12px;border:1px solid var(--line);border-radius:12px}
-.lb h4{margin:0 0 6px;font:600 13px Inter;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.lb h4{margin:0 0 6px;font:600 13px Nunito;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
 .lb ol{margin:0;padding-left:22px;font-size:14px}.lb li{margin:3px 0}.lb li b{font-weight:600}
 .lb li.me{color:var(--accent)}.lbnote{font-size:12px;color:var(--muted);margin-top:6px}
 .submitbox{margin-top:14px;padding:12px;border:1px dashed var(--line);border-radius:12px;background:#fffaf5}
@@ -98,7 +98,7 @@ h3{margin:0 0 10px;font:600 13px Inter;text-transform:uppercase;letter-spacing:.
 .submitbox .flyrow{margin-top:6px}
 .submitbox .fly{display:flex;align-items:center;text-decoration:none;white-space:nowrap}
 .submitbox small{display:block;color:var(--muted);font-size:12px;margin-top:6px}
-.lbl{font:600 10px Inter;fill:#fff;paint-order:stroke;stroke:#0f2236;stroke-width:3px;stroke-linejoin:round;pointer-events:none}
+.lbl{font:600 10px Nunito;fill:#fff;paint-order:stroke;stroke:#0f2236;stroke-width:3px;stroke-linejoin:round;pointer-events:none}
 @keyframes pulse{0%{r:4;opacity:.9}100%{r:16;opacity:0}}
 .pulse{animation:pulse 1.6s ease-out infinite;fill:none;stroke:var(--accent2);stroke-width:2}
 </style>
