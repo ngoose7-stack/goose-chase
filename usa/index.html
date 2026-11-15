@@ -227,7 +227,7 @@ function rng(seed){let a=seed>>>0;return()=>{a=(a+0x6D2B79F5)>>>0;let t=a;t=Math
 const EPOCH=Date.UTC(2026,0,1);
 function todayNum(){const d=new Date();return Math.floor((Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())-EPOCH)/864e5)+1}
 function makePuzzle(seed){
-  const r=rng(seed*2654435761+12345);for(let i=0;i<5;i++)r();
+  const r=rng(seed*2654435761+12345+777);for(let i=0;i<5;i++)r();
   const pick=POOL[Math.floor(r()*POOL.length)];
   const target=byName[norm(pick[0])].find(c=>c.ab===pick[1]);
   const starts=C.filter(c=>c.pop>=300000&&c!==target&&miles(c,target)>800);
@@ -245,14 +245,14 @@ function newGame(mode,seed){
      b:{minLat:-90,maxLat:90,minLon:-180,maxLon:180,src:{}},done:false,won:false};
   
   S.flights.push({city:start,dist:0,start:true,type:'start',text:'Your starting point. No clues here, so take off!'});
-  if(mode==='daily'){const saved=store.get('fpusa-daily-'+seed);if(saved&&saved.moves){replay(saved.moves);}}else{const c=store.get(PFX+'cur');if(c&&c.mode==='random'&&c.seed===seed&&c.moves)replay(c.moves);}
-  S.log=S.log||[];store.set(PFX+'cur',{mode,seed,moves:S.log,done:S.done});
+  if(mode==='daily'){const saved=store.get('fpusa-daily2-'+seed);if(saved&&saved.moves){replay(saved.moves);}}else{const c=store.get(PFX+'cur2');if(c&&c.mode==='random'&&c.seed===seed&&c.moves)replay(c.moves);}
+  S.log=S.log||[];store.set(PFX+'cur2',{mode,seed,moves:S.log,done:S.done});
   document.getElementById('pid').textContent=mode==='daily'?`${new Date().toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})}`:'Random puzzle';
   hideMenu();setMsg('');render(true);
   if(S.done)setTimeout(showEnd,300);
 }
 function replay(moves){for(const m of moves){if(m[0]==='f')fly(C[m[1]],true);else useHint(m[1],true);}}
-function saveDaily(){S.log=S.log||[];store.set(PFX+'cur',{mode:S.mode,seed:S.seed,moves:S.log,done:S.done});if(S.mode!=='daily')return;store.set('fpusa-daily-'+S.seed,{moves:S.log});}
+function saveDaily(){S.log=S.log||[];store.set(PFX+'cur2',{mode:S.mode,seed:S.seed,moves:S.log,done:S.done});if(S.mode!=='daily')return;store.set('fpusa-daily2-'+S.seed,{moves:S.log});}
 
 function knownAt(i){const k=S.known,T=S.target.key;if(i<k.prefix.length)return T[i];if(k.len!=null&&i>=k.len-k.suffix.length)return T[i];return k.pos[i]||null}
 function clueFor(city){
@@ -297,8 +297,8 @@ function useHint(h,silent){
   if(!silent){saveDaily();hideMenu();finishIfDone();render();}
 }
 function finishIfDone(){if(!S.done)return;
-  if(S.mode==='daily'){const st=store.get('fpusa-stats')||{played:0,wins:0,last:null,streak:0};
-    if(st.last!==S.seed){st.played++;if(S.won){st.wins++;st.streak=(st.last===S.seed-1?st.streak:0)+1}else st.streak=0;st.last=S.seed;store.set('fpusa-stats',st)}}
+  if(S.mode==='daily'){const st=store.get('fpusa-stats2')||{played:0,wins:0,last:null,streak:0};
+    if(st.last!==S.seed){st.played++;if(S.won){st.wins++;st.streak=(st.last===S.seed-1?st.streak:0)+1}else st.streak=0;st.last=S.seed;store.set('fpusa-stats2',st)}}
   setTimeout(showEnd,700)}
 
 const HALF=4800;const PEN=350;
@@ -457,7 +457,7 @@ const RESP='https://docs.google.com/forms/d/e/1FAIpQLSeNNFuxrrusxPDy1lIKeU0oxVqc
 function chk(t){let h=5381;for(const c of t+'|fp-salt-7q')h=((h<<5)+h+c.charCodeAt(0))>>>0;return h.toString(36).slice(-4).toUpperCase()}
 function myRow(){return{a:acc(),m:Math.round(S.miss),f:S.flights.filter(f=>f.city&&!f.start).length,h:S.hints.filter(h=>h!=='giveup').length}}
 function scoreLine(id){const r=myRow();
-  const base=`${GAME} ${S.mode==='daily'?'':'Random '}#${S.seed} · ${new Date().toLocaleDateString('en-CA')} · ${r.a}% accuracy · ${fmt(r.m)} mi total miss · ${r.f} flight${r.f===1?'':'s'} · ${r.h} hint${r.h===1?'':'s'}`;
+  const base=`${GAME} v2 ${S.mode==='daily'?'':'Random '}#${S.seed} · ${new Date().toLocaleDateString('en-CA')} · ${r.a}% accuracy · ${fmt(r.m)} mi total miss · ${r.f} flight${r.f===1?'':'s'} · ${r.h} hint${r.h===1?'':'s'}`;
   return base+' · code '+chk(base)+(id?' · id '+id:'')}
 const better=(x,y)=>x.a!==y.a?x.a>y.a:x.f!==y.f?x.f<y.f:x.h!==y.h?x.h<y.h:x.m<y.m;
 const sortB=a=>a.sort((x,y)=>better(x,y)?-1:better(y,x)?1:0);
@@ -473,7 +473,7 @@ function parseCSV(t){const rows=[];let row=[],f='',q=false;for(let i=0;i<t.lengt
   if(q){if(c==='"'){if(t[i+1]==='"'){f+='"';i++}else q=false}else f+=c}
   else if(c==='"')q=true;else if(c===','){row.push(f);f=''}else if(c==='\n'){row.push(f);rows.push(row);row=[];f=''}else if(c!=='\r')f+=c}
   if(f||row.length){row.push(f);rows.push(row)}return rows}
-const RX=/^(World|USA) (Random )?#(\d+) · (\d{4}-\d\d-\d\d) · (\d+)% accuracy · ([\d,]+) mi total miss · (\d+) flights? · (\d+) hints? · code (\w{4})(?: · id (\w+))?$/;
+const RX=/^(World|USA) v2 (Random )?#(\d+) · (\d{4}-\d\d-\d\d) · (\d+)% accuracy · ([\d,]+) mi total miss · (\d+) flights? · (\d+) hints? · code (\w{4})(?: · id (\w+))?$/;
 let boardStatus='idle';
 async function loadBoard(){boardStatus='loading';
   try{const r=await fetch(SHEET_CSV+'&t='+Date.now());if(!r.ok)throw 0;const rows=parseCSV(await r.text()).slice(1);
@@ -490,7 +490,7 @@ async function loadBoard(){boardStatus='loading';
     const rTop=sortB(ents.random.slice());
     window.BOARDS={daily:{key:bkey('daily'),top:sortB(dTop).slice(0,5)},random:{key:bkey('random'),top:rTop.slice(0,5)}};boardStatus='ok'}catch(e){boardStatus='error'}}
 function updSubmit(){}
-const entryKey=()=>S.mode==='daily'?PFX+'entry-'+S.seed:PFX+'rentry-'+S.seed;
+const entryKey=()=>S.mode==='daily'?PFX+'entry2-'+S.seed:PFX+'rentry2-'+S.seed;
 async function postScore(name,id){await fetch(POST_URL,{method:'POST',mode:'no-cors',body:new URLSearchParams({'entry.1420984043':name,'entry.927338116':scoreLine(id)})})}
 async function autoSubmit(){if(!S.won||store.get(entryKey())||!qualifies())return;
   const id=Math.random().toString(36).slice(2,10),name=store.get('fp-name')||'Anonymous';
@@ -520,12 +520,12 @@ function showEnd(){const nf=S.flights.filter(f=>f.city&&!f.start).length;
   $('endTitle').textContent=S.won?'You found it! 🎯':'So close…';
   $('endSub').innerHTML=`The mystery city was <b>${S.target.name}</b>, ${S.target.country}.`;
   $('eF').textContent=nf;$('eD').textContent=fmt(S.miss);$('eA').textContent=acc()+'%';const nh=S.hints.filter(h=>h!=='giveup').length;if(nh)$('endSub').innerHTML+=` Hints used: ${nh}.`;
-  const st=store.get('fpusa-stats');$('eStreak').textContent=S.mode==='daily'&&st?`Daily puzzles played: ${st.played} · Solved: ${st.wins} · Current streak: ${st.streak}`:'';
+  const st=store.get('fpusa-stats2');$('eStreak').textContent=S.mode==='daily'&&st?`Daily puzzles played: ${st.played} · Solved: ${st.wins} · Current streak: ${st.streak}`:'';
   $('copyBtn').textContent='Copy result';$('lbBox').style.display='block';$('submitBox').style.display='none';{$('pname').value='';$('subNote').textContent='Your score is already on the board. Adding a name is optional.';$('submitLink').disabled=false;$('submitLink').textContent='Save name';renderBoard();loadBoard().then(()=>{renderBoard();autoSubmit()})}$('endOv').classList.add('open')}
 document.addEventListener('keydown',e=>{if(e.key!=='Enter'||e.repeat||!S||!S.done)return;if(e.target.closest&&e.target.closest('button,a,input'))return;if($('howOv').classList.contains('open'))return;e.preventDefault();$('endOv').classList.remove('open');newGame('random',Math.floor(Math.random()*1e9));setTimeout(()=>$('q').focus(),50)});
 $('copyBtn').onclick=async()=>{try{await navigator.clipboard.writeText(resultText());$('copyBtn').textContent='Copied!'}catch(e){$('copyBtn').textContent='Copy failed'}};
 
-layout();{const c=store.get(PFX+'cur');if(c&&c.mode==='random'&&!c.done)newGame('random',c.seed);else newGame('daily',todayNum());}
+layout();{const c=store.get(PFX+'cur2');if(c&&c.mode==='random'&&!c.done)newGame('random',c.seed);else newGame('daily',todayNum());}
 if(document.fonts)document.fonts.ready.then(layout);setTimeout(layout,400);
 if(!store.get('fpusa-seen-how')){$('howOv').classList.add('open');store.set('fpusa-seen-how',1)}
 </script>
