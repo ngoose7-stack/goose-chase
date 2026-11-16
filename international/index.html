@@ -88,7 +88,10 @@ h3{margin:0 0 10px;font:600 13px Nunito;text-transform:uppercase;letter-spacing:
 .big{display:flex;gap:10px;margin:14px 0}
 .big div{flex:1;background:#faf7f1;border-radius:10px;padding:10px;text-align:center}
 .big b{display:block;font:700 22px Fredoka}
-.big small{color:var(--muted)}
+.big div.score{background:var(--accent);color:#fff}.big div.score small{color:#fff;opacity:.9}
+@media(max-width:560px){.big{flex-wrap:wrap}.big div{flex:1 1 28%}}
+.big small{color:var(--muted);font-size:12px;line-height:1.25;display:block}
+.big div{padding:10px 6px!important}
 .mrow{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
 .mrow button{flex:1;padding:10px;border-radius:10px;border:1px solid var(--line);background:#fff;font-weight:600}
 .mrow button.pri{background:var(--accent);color:#fff;border-color:var(--accent)}
@@ -141,7 +144,7 @@ h3{margin:0 0 10px;font:600 13px Nunito;text-transform:uppercase;letter-spacing:
   <div class="panel">
     <div class="card">
       <div class="status"><div class="where" id="where"></div></div>
-      <div class="stats" style="margin-top:6px"><span>Flights <b id="sFlights">0</b></span><span id="scoreStats" style="display:none;gap:14px"><span>Total miss <b id="sMiss">0</b> mi</span><span>Off route <b id="sDev">0</b> mi</span><span>Accuracy <b id="sAcc">100%</b></span></span><span>Hints <b id="sHints">0</b></span></div>
+      <div class="stats" style="margin-top:6px"><span>Flights <b id="sFlights">0</b></span><span id="scoreStats" style="display:none;gap:14px"><span>Total miss <b id="sMiss">0</b> mi</span><span>Off route <b id="sDev">0</b> mi</span><span>Route accuracy <b id="sRte">100%</b></span><span>Score <b id="sAcc">100</b>/100</span></span><span>Hints <b id="sHints">0</b></span></div>
       <form class="flyrow" id="flyForm" autocomplete="off" role="search">
         <input id="q" type="search" autocomplete="off" spellcheck="false" data-lpignore="true" data-1p-ignore placeholder="Type a city (or a country)…" aria-label="City to fly to">
         <button class="fly" id="flyBtn" type="submit">Fly</button>
@@ -182,7 +185,7 @@ h3{margin:0 0 10px;font:600 13px Nunito;text-transform:uppercase;letter-spacing:
         <li>Same last letter(s) → you learn how it ends</li>
       </ul></li>
     <li>The <b>?</b> button has extra hints (they unlock after 4 flights) and a give-up option.</li>
-    <li><b>Scoring:</b> each flight's miss is how far it lands from the mystery city. Each flight is also measured against the <b>line of best flight</b>, the direct route from your starting city to the mystery city, and how far it strays adds to your off-route miles. Your total miss, your off-route miles, and a penalty for every flight after your first combine into your accuracy score (from 0% to 100%).</li>
+    <li><b>Scoring:</b> each flight's miss is how far it lands from the mystery city. Each flight is also measured against the <b>line of best flight</b>, the direct route from your starting city to the mystery city, and how far it strays adds to your off-route miles. Your total miss, your off-route miles, and a penalty for every flight after your first combine into your score (from 0 to 100). Your route accuracy (0% to 100%) shows how closely you stuck to that line.</li>
   </ul>
   <div class="mrow"><button class="pri" data-close>Let's fly</button></div>
 </div></div>
@@ -190,7 +193,7 @@ h3{margin:0 0 10px;font:600 13px Nunito;text-transform:uppercase;letter-spacing:
 <div class="overlay" id="endOv"><div class="modal">
   <h2 id="endTitle"></h2>
   <p id="endSub"></p>
-  <div class="big"><div><b id="eF"></b><small>flights</small></div><div><b id="eD"></b><small>total miss (mi)</small></div><div><b id="eR"></b><small>off route (mi)</small></div><div><b id="eA"></b><small>accuracy</small></div></div>
+  <div class="big"><div><b id="eF"></b><small>flights</small></div><div><b id="eD"></b><small>total miss (mi)</small></div><div><b id="eR"></b><small>off route (mi)</small></div><div><b id="eQ"></b><small>route accuracy</small></div><div class="score"><b id="eA"></b><small>score (0–100)</small></div></div>
   <div><div class="lb" id="lbBox"><h4>Daily puzzle: today's top 5</h4><ol id="lbList"></ol><div class="lbnote" id="lbNote"></div></div>
   <div class="lb" id="lbBox2"><h4>Random puzzles: today's top 5</h4><ol id="lbList2"></ol><div class="lbnote" id="lbNote2"></div></div></div>
   <div class="submitbox" id="submitBox">
@@ -306,6 +309,7 @@ function finishIfDone(){if(!S.done)return;
   setTimeout(showEnd,700)}
 
 const HALF=32000;const PEN=1500;
+const RHALF=9000;function routeAcc(){return Math.round(100*Math.pow(.5,S.dev/RHALF))}
 function acc(){if(S.done&&!S.won)return 0;const nf=S.flights.filter(f=>f.city&&!f.start).length;return Math.round(100*Math.pow(.5,(S.miss+S.dev+PEN*Math.max(0,nf-1))/HALF))}
 // ---------- render ----------
 const $=id=>document.getElementById(id);
@@ -314,7 +318,7 @@ function render(first){
   const k=S.known;
   $('where').innerHTML=S.done?(S.won?`🎯 Landed in ${S.target.name}!`:`Mystery city: ${S.target.name}`):`✈️ You're in ${S.cur.name}, ${S.cur.country}`;
   const nf=S.flights.filter(f=>f.city&&!f.start).length;
-  $('sFlights').textContent=nf;$("sMiss").textContent=fmt(S.miss);$("sDev").textContent=fmt(S.dev);$('sAcc').textContent=acc()+'%';$('scoreStats').style.display=S.done?'inline-flex':'none';$('sHints').textContent=S.hints.filter(h=>h!=='giveup').length;
+  $('sFlights').textContent=nf;$("sMiss").textContent=fmt(S.miss);$("sDev").textContent=fmt(S.dev);$('sAcc').textContent=acc();$('sRte').textContent=routeAcc()+'%';$('scoreStats').style.display=S.done?'inline-flex':'none';$('sHints').textContent=S.hints.filter(h=>h!=='giveup').length;
   $('q').disabled=$('flyBtn').disabled=$('hintBtn').disabled=S.done;
   // knowledge
   let h='';const T=S.target.key;
@@ -458,7 +462,7 @@ $('zoomWorld').onclick=()=>setView(homeView(),true);
 $('zoomFit').onclick=()=>setView(S.flights.length<=1&&!S.done?homeView():S.done?homeView():fitView(),true);
 function resultText(){const nf=S.flights.filter(f=>f.city&&!f.start).length;
   const em=S.flights.filter(f=>!f.start).map(f=>f.type==='win'?'🎯':(f.type==='name'||f.type==='both')?'🔤':f.type==='dir'?'🧭':f.text.startsWith('Gave')?'🏳️':'💡').join('');
-  return`Goose Chase: International · ${S.mode==='daily'?new Date().toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):'random puzzle'} 🌍\n${S.won?`Found it in ${nf} flight${nf===1?'':'s'}`:'Gave up'} · ${fmt(S.miss)} mi total miss · ${fmt(S.dev)} mi off route · ${acc()}% accuracy\n${em}`}
+  return`Goose Chase: International · ${S.mode==='daily'?new Date().toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):'random puzzle'} 🌍\n${S.won?`Found it in ${nf} flight${nf===1?'':'s'}`:'Gave up'} · ${fmt(S.miss)} mi total miss · ${routeAcc()}% route accuracy · Score ${acc()}/100\n${em}`}
 const RESP='https://docs.google.com/forms/d/e/1FAIpQLSeNNFuxrrusxPDy1lIKeU0oxVqc325ybY0m5FUUC8ClbfaymQ/formResponse?submit=Submit',GAME='World',PFX='fp-';
 function chk(t){let h=5381;for(const c of t+'|fp-salt-7q')h=((h<<5)+h+c.charCodeAt(0))>>>0;return h.toString(36).slice(-4).toUpperCase()}
 function myRow(){return{a:acc(),m:Math.round(S.miss),d:Math.round(S.dev),f:S.flights.filter(f=>f.city&&!f.start).length,h:S.hints.filter(h=>h!=='giveup').length}}
@@ -509,7 +513,7 @@ $('submitLink').addEventListener('click',async()=>{const n=$('pname').value.trim
   catch(e){btn.disabled=false;btn.textContent='Save name';$('subNote').textContent="Couldn't save. Check your connection and try again."}
 });
 function fillList(ol,rows){ol.textContent='';
-  rows.slice(0,5).forEach(r=>{const li=document.createElement('li');if(r.me)li.className='me';const b=document.createElement('b');b.textContent=(r.n||'Anonymous')+(r.me?' (you)':'');li.append(b,` · ${r.a}% · ${r.f} flight${r.f===1?'':'s'} · ${fmt(r.m)} mi`);ol.append(li)});
+  rows.slice(0,5).forEach(r=>{const li=document.createElement('li');if(r.me)li.className='me';const b=document.createElement('b');b.textContent=(r.n||'Anonymous')+(r.me?' (you)':'');li.append(b,` · ${r.a}/100 · ${r.f} flight${r.f===1?'':'s'} · ${fmt(r.m)} mi`);ol.append(li)});
   if(!rows.length){const li=document.createElement('li');li.textContent='No scores posted yet today.';li.style.listStyle='none';ol.append(li)}}
 function renderBoard(){const me=myRow(),en=S.won?store.get(entryKey()):null,cur=S.mode==='daily'?'daily':'random',other=cur==='daily'?'random':'daily';
   const box={daily:$('lbBox'),random:$('lbBox2')},list={daily:$('lbList'),random:$('lbList2')},note={daily:$('lbNote'),random:$('lbNote2')};
@@ -525,7 +529,7 @@ function renderBoard(){const me=myRow(),en=S.won?store.get(entryKey()):null,cur=
 function showEnd(){const nf=S.flights.filter(f=>f.city&&!f.start).length;
   $('endTitle').textContent=S.won?'You found it! 🎯':'So close…';
   $('endSub').innerHTML=`The mystery city was <b>${S.target.name}</b>, ${S.target.country}.`;
-  $('eF').textContent=nf;$('eD').textContent=fmt(S.miss);$('eR').textContent=fmt(S.dev);$('eA').textContent=acc()+'%';const nh=S.hints.filter(h=>h!=='giveup').length;if(nh)$('endSub').innerHTML+=` Hints used: ${nh}.`;
+  $('eF').textContent=nf;$('eD').textContent=fmt(S.miss);$('eR').textContent=fmt(S.dev);$('eA').textContent=acc();$('eQ').textContent=routeAcc()+'%';const nh=S.hints.filter(h=>h!=='giveup').length;if(nh)$('endSub').innerHTML+=` Hints used: ${nh}.`;
   const st=store.get('fp-stats2');$('eStreak').textContent=S.mode==='daily'&&st?`Daily puzzles played: ${st.played} · Solved: ${st.wins} · Current streak: ${st.streak}`:'';
   $('copyBtn').textContent='Copy result';$('lbBox').style.display='block';$('submitBox').style.display='none';{$('pname').value='';$('subNote').textContent='Your score is already on the board. Adding a name is optional.';$('submitLink').disabled=false;$('submitLink').textContent='Save name';renderBoard();loadBoard().then(()=>{renderBoard();autoSubmit()})}$('endOv').classList.add('open')}
 document.addEventListener('keydown',e=>{if(e.key!=='Enter'||e.repeat||!S||!S.done)return;if(e.target.closest&&e.target.closest('button,a,input'))return;if($('howOv').classList.contains('open'))return;e.preventDefault();$('endOv').classList.remove('open');newGame('random',Math.floor(Math.random()*1e9));setTimeout(()=>$('q').focus(),50)});
