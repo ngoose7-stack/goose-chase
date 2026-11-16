@@ -406,7 +406,7 @@ addEventListener('resize',layout);
 let sel=-1,items=[];
 function suggest(){
   const raw=$('q').value,q=norm(raw);items=[];sel=-1;const box=$('sugg');
-  if(!q){box.style.display='none';return}
+  if(q.length<3){box.style.display='none';return}
   let html='';
   const cityM=C.filter(c=>c.key.startsWith(q)||c.name.toUpperCase().split(/[\s\-]+/).some(w=>norm(w).startsWith(q)&&q.length>=3)).sort((a,b)=>(b.key.startsWith(q))-(a.key.startsWith(q))||b.pop-a.pop).slice(0,7);
   if(ALIAS[q]){const a=byName[norm(ALIAS[q])][0];if(!cityM.includes(a))cityM.unshift(a)}
@@ -430,6 +430,7 @@ $('flyForm').addEventListener('submit',e=>{e.preventDefault();if(S.done)return;
   if(exact)return choose(exact[0]);
   if(items.length===1)return choose(items[0]);
   if(countries[q]){setMsg(`That's a country. Pick one of its cities from the list.`,true);suggest();return}
+  if(q.length<3)return setMsg('Type at least 3 letters.',true);
   setMsg(items.length?'Pick a city from the list.':`Couldn't find "${$('q').value}". Try a bigger or nearby city.`,true)});
 function setMsg(t,err){$('msg').textContent=t;$('msg').className='msg'+(err?' err':'')}
 
