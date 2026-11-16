@@ -150,6 +150,7 @@ h3{margin:0 0 10px;font:600 13px Nunito;text-transform:uppercase;letter-spacing:
       </form>
       <div class="msg" id="msg"></div>
       <div class="hintmenu" id="hintMenu">
+        <div id="hintLock" style="width:100%;font-size:13px;color:var(--muted)"></div>
         <button data-h="continent">Reveal continent</button>
         <button data-h="country">Reveal country</button>
         <button data-h="length">Reveal letter count</button>
@@ -279,8 +280,9 @@ function fly(city,silent){
     S.flights.push(ent)}
   if(!silent){saveDaily();finishIfDone();render();}
 }
+const HINT_AFTER=4,nFlights=()=>S.flights.filter(f=>f.city&&!f.start).length;
 function useHint(h,silent){
-  if(S.done)return;const k=S.known,t=S.target;let text='';
+  if(S.done)return;if(h!=='giveup'&&nFlights()<HINT_AFTER)return;const k=S.known,t=S.target;let text='';
   if(h==='continent'){if(k.continent)return;k.continent=CONT[t.cont];text=`Hint: it's in ${k.continent}`}
   else if(h==='country'){if(k.country)return;k.country=t.country;text=`Hint: it's in ${t.country}`}
   else if(h==='length'){if(k.len!=null)return;k.len=t.key.length;text=`Hint: it has ${k.len} letters`}
@@ -333,7 +335,8 @@ function render(first){
     const cls=fl.type==='name'?'name':(fl.type==='dir'||fl.type==='both')?'dir':'';
     return`<div class="entry"><div class="n">${num}</div><div><div class="c">${fl.city?fl.city.name+`<span style="font-weight:400;color:var(--muted)">, ${fl.city.country}</span>`:'Hint'}${fl.start?' <span style="font-weight:400;color:var(--muted)">(start)</span>':''}</div>${fl.name?`<div class="clue name">${fl.name}</div>`:''}<div class="clue ${cls}">${fl.text}</div></div><div class="d">${fl.city&&!fl.start?(!S.done?'':fl.type==='win'?'🎯 0 mi off':fmt(fl.dist)+' mi off'):''}</div></div>`}).reverse().join('');
   // hint buttons
-  document.querySelectorAll('#hintMenu button').forEach(bt=>{const x=bt.dataset.h;bt.disabled=S.done||(x==='continent'&&k.continent)||(x==='country'&&k.country)||(x==='length'&&k.len!=null)});
+  const hl=Math.max(0,HINT_AFTER-nFlights());$('hintLock').textContent=hl?`🔒 Hints unlock after ${HINT_AFTER} flights (${hl} to go).`:'';$('hintLock').style.display=hl?'block':'none';
+  document.querySelectorAll('#hintMenu button').forEach(bt=>{const x=bt.dataset.h;bt.disabled=S.done||(x!=='giveup'&&hl>0)||(x==='continent'&&k.continent)||(x==='country'&&k.country)||(x==='length'&&k.len!=null)});
   setView(targetView(),!first);
 }
 const LIMITS={w:-180,e:180,s:-58,n:80,min:40};
