@@ -142,8 +142,8 @@ h3{margin:0 0 10px;font:600 13px Nunito;text-transform:uppercase;letter-spacing:
     <div class="card">
       <div class="status"><div class="where" id="where"></div></div>
       <div class="stats" style="margin-top:6px"><span>Flights <b id="sFlights">0</b></span><span id="scoreStats" style="display:none;gap:14px"><span>Total miss <b id="sMiss">0</b> mi</span><span>Accuracy <b id="sAcc">100%</b></span></span><span>Hints <b id="sHints">0</b></span></div>
-      <form class="flyrow" id="flyForm" autocomplete="off">
-        <input id="q" placeholder="Type a city (or a country)…" aria-label="City to fly to">
+      <form class="flyrow" id="flyForm" autocomplete="off" role="search">
+        <input id="q" type="search" autocomplete="off" spellcheck="false" data-lpignore="true" data-1p-ignore placeholder="Type a city (or a country)…" aria-label="City to fly to">
         <button class="fly" id="flyBtn" type="submit">Fly</button>
         <button class="qbtn" id="hintBtn" type="button" title="Hints & give up">?</button>
         <div class="sugg" id="sugg"></div>
@@ -194,7 +194,7 @@ h3{margin:0 0 10px;font:600 13px Nunito;text-transform:uppercase;letter-spacing:
   <div class="lb" id="lbBox2"><h4>Random puzzles: today's top 5</h4><ol id="lbList2"></ol><div class="lbnote" id="lbNote2"></div></div></div>
   <div class="submitbox" id="submitBox">
     <label for="pname" id="pnameLbl">🎉 You made today's top 5!</label>
-    <div class="flyrow"><input id="pname" maxlength="24" placeholder="Your name" autocomplete="nickname"><button id="submitLink" class="fly" type="button">Save name</button></div>
+    <div class="flyrow"><input id="pname" maxlength="24" placeholder="Leaderboard nickname" autocomplete="off" autocapitalize="words" spellcheck="false" data-lpignore="true" data-1p-ignore><button id="submitLink" class="fly" type="button">Save name</button></div>
     <small id="subNote">Your score is already on the board. Adding a name is optional.</small>
   </div>
   <div id="eStreak" style="font-size:13px;color:var(--muted)"></div>
