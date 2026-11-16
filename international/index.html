@@ -141,7 +141,7 @@ h3{margin:0 0 10px;font:600 13px Nunito;text-transform:uppercase;letter-spacing:
   <div class="panel">
     <div class="card">
       <div class="status"><div class="where" id="where"></div></div>
-      <div class="stats" style="margin-top:6px"><span>Flights <b id="sFlights">0</b></span><span id="scoreStats" style="display:none;gap:14px"><span>Total miss <b id="sMiss">0</b> mi</span><span>Accuracy <b id="sAcc">100%</b></span></span><span>Hints <b id="sHints">0</b></span></div>
+      <div class="stats" style="margin-top:6px"><span>Flights <b id="sFlights">0</b></span><span id="scoreStats" style="display:none;gap:14px"><span>Total miss <b id="sMiss">0</b> mi</span><span>Off route <b id="sDev">0</b> mi</span><span>Accuracy <b id="sAcc">100%</b></span></span><span>Hints <b id="sHints">0</b></span></div>
       <form class="flyrow" id="flyForm" autocomplete="off" role="search">
         <input id="q" type="search" autocomplete="off" spellcheck="false" data-lpignore="true" data-1p-ignore placeholder="Type a city (or a country)…" aria-label="City to fly to">
         <button class="fly" id="flyBtn" type="submit">Fly</button>
@@ -182,7 +182,7 @@ h3{margin:0 0 10px;font:600 13px Nunito;text-transform:uppercase;letter-spacing:
         <li>Same last letter(s) → you learn how it ends</li>
       </ul></li>
     <li>The <b>?</b> button has extra hints (they unlock after 4 flights) and a give-up option.</li>
-    <li><b>Scoring:</b> each flight's miss is how far it lands from the mystery city. Your total miss, plus a penalty for every flight after your first, informs your accuracy score (from 0% to 100%).</li>
+    <li><b>Scoring:</b> each flight's miss is how far it lands from the mystery city. Each flight is also measured against the <b>line of best flight</b>, the direct route from your starting city to the mystery city, and how far it strays adds to your off-route miles. Your total miss, your off-route miles, and a penalty for every flight after your first combine into your accuracy score (from 0% to 100%).</li>
   </ul>
   <div class="mrow"><button class="pri" data-close>Let's fly</button></div>
 </div></div>
@@ -190,7 +190,7 @@ h3{margin:0 0 10px;font:600 13px Nunito;text-transform:uppercase;letter-spacing:
 <div class="overlay" id="endOv"><div class="modal">
   <h2 id="endTitle"></h2>
   <p id="endSub"></p>
-  <div class="big"><div><b id="eF"></b><small>flights</small></div><div><b id="eD"></b><small>total miss (mi)</small></div><div><b id="eA"></b><small>accuracy</small></div></div>
+  <div class="big"><div><b id="eF"></b><small>flights</small></div><div><b id="eD"></b><small>total miss (mi)</small></div><div><b id="eR"></b><small>off route (mi)</small></div><div><b id="eA"></b><small>accuracy</small></div></div>
   <div><div class="lb" id="lbBox"><h4>Daily puzzle: today's top 5</h4><ol id="lbList"></ol><div class="lbnote" id="lbNote"></div></div>
   <div class="lb" id="lbBox2"><h4>Random puzzles: today's top 5</h4><ol id="lbList2"></ol><div class="lbnote" id="lbNote2"></div></div></div>
   <div class="submitbox" id="submitBox">
@@ -218,6 +218,11 @@ const dupName=k=>byName[k].length>1;
 
 // ---------- geometry ----------
 const R=3958.8, rad=d=>d*Math.PI/180, deg=r=>r*180/Math.PI;
+function offRoute(p,a,b){const d12=miles(a,b)/R,d13=miles(a,p)/R;if(d12<1e-9)return miles(p,a);
+  const brg=(x,y)=>{const p1=rad(x.lat),p2=rad(y.lat),dl=rad(y.lon-x.lon);return Math.atan2(Math.sin(dl)*Math.cos(p2),Math.cos(p1)*Math.sin(p2)-Math.sin(p1)*Math.cos(p2)*Math.cos(dl))};
+  const t=brg(a,p)-brg(a,b);if(Math.cos(t)<0)return d13*R;
+  const xt=Math.asin(Math.max(-1,Math.min(1,Math.sin(d13)*Math.sin(t)))),at=Math.acos(Math.max(-1,Math.min(1,Math.cos(d13)/Math.max(1e-12,Math.cos(xt)))));
+  return at>d12?miles(p,b):Math.abs(xt)*R}
 function miles(a,b){const dl=rad(b.lat-a.lat),dn=rad(b.lon-a.lon);const h=Math.sin(dl/2)**2+Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.min(1,Math.sqrt(h)))}
 
 // ---------- rng / puzzle ----------
@@ -238,7 +243,7 @@ const store={get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){retu
 let S;
 function newGame(mode,seed){
   const {target,start}=makePuzzle(seed);
-  S={mode,seed,target,start,cur:start,perk:false,visited:new Set([start.i]),flights:[],total:0,miss:0,hints:[],
+  S={mode,seed,target,start,cur:start,perk:false,visited:new Set([start.i]),flights:[],total:0,miss:0,dev:0,hints:[],
      known:{len:null,prefix:'',suffix:'',pos:{},continent:null,country:null},
      b:{minLat:-90,maxLat:90,minLon:-180,maxLon:180,src:{}},done:false,won:false};
   
@@ -276,7 +281,7 @@ function fly(city,silent){
   const dist=city===S.target?0:miles(city,S.target);S.miss+=dist;S.total+=miles(S.cur,city);S.cur=city;S.visited.add(city.i);
   S.log=S.log||[];S.log.push(['f',city.i]);
   if(city===S.target){S.won=S.done=true;S.flights.push({city,dist,type:'win',text:'You found the mystery city!'})}
-  else{const ent={city,dist,...clueFor(city)};
+  else{const dv=offRoute(city,S.start,S.target);S.dev+=dv;const ent={city,dist,dev:dv,...clueFor(city)};
     S.flights.push(ent)}
   if(!silent){saveDaily();finishIfDone();render();}
 }
@@ -300,8 +305,8 @@ function finishIfDone(){if(!S.done)return;
     if(st.last!==S.seed){st.played++;if(S.won){st.wins++;st.streak=(st.last===S.seed-1?st.streak:0)+1}else st.streak=0;st.last=S.seed;store.set('fp-stats2',st)}}
   setTimeout(showEnd,700)}
 
-const HALF=21000;const PEN=1500;
-function acc(){if(S.done&&!S.won)return 0;const nf=S.flights.filter(f=>f.city&&!f.start).length;return Math.round(100*Math.pow(.5,(S.miss+PEN*Math.max(0,nf-1))/HALF))}
+const HALF=32000;const PEN=1500;
+function acc(){if(S.done&&!S.won)return 0;const nf=S.flights.filter(f=>f.city&&!f.start).length;return Math.round(100*Math.pow(.5,(S.miss+S.dev+PEN*Math.max(0,nf-1))/HALF))}
 // ---------- render ----------
 const $=id=>document.getElementById(id);
 const fmt=n=>Math.round(n).toLocaleString();
@@ -309,7 +314,7 @@ function render(first){
   const k=S.known;
   $('where').innerHTML=S.done?(S.won?`🎯 Landed in ${S.target.name}!`:`Mystery city: ${S.target.name}`):`✈️ You're in ${S.cur.name}, ${S.cur.country}`;
   const nf=S.flights.filter(f=>f.city&&!f.start).length;
-  $('sFlights').textContent=nf;$('sMiss').textContent=fmt(S.miss);$('sAcc').textContent=acc()+'%';$('scoreStats').style.display=S.done?'inline-flex':'none';$('sHints').textContent=S.hints.filter(h=>h!=='giveup').length;
+  $('sFlights').textContent=nf;$("sMiss").textContent=fmt(S.miss);$("sDev").textContent=fmt(S.dev);$('sAcc').textContent=acc()+'%';$('scoreStats').style.display=S.done?'inline-flex':'none';$('sHints').textContent=S.hints.filter(h=>h!=='giveup').length;
   $('q').disabled=$('flyBtn').disabled=$('hintBtn').disabled=S.done;
   // knowledge
   let h='';const T=S.target.key;
@@ -364,6 +369,7 @@ function drawMap(){if(!S)return;setProj();const sph=gpath({type:'Sphere'});
   const seg=(a,b,st,op,da)=>`<path d="${gpath({type:'LineString',coordinates:[[a.lon,a.lat],[b.lon,b.lat]]})||''}" fill="none" stroke="${st}" stroke-opacity="${op}" stroke-width="1.8" stroke-dasharray="${da}"/>`;
   for(let i=1;i<pts.length;i++){const last=i===pts.length-1;rt+=seg(pts[i-1].city,pts[i].city,last&&!S.done?'#f2a33a':'#ffffff',last?1:.5,'5 4')}
   if(S.done&&!S.won)rt+=seg(S.cur,S.target,'#ff6b6b',1,'2 5');
+  if(S.done)rt=`<path d="${gpath({type:'LineString',coordinates:[[S.start.lon,S.start.lat],[S.target.lon,S.target.lat]]})||''}" fill="none" stroke="#2f7d4f" stroke-width="3" stroke-opacity=".85" stroke-dasharray="1 6" stroke-linecap="round"/>`+rt;
   $('routes').innerHTML=rt;
   let d='';const seen=new Set();
   pts.forEach(f=>{const c=f.city;if(seen.has(c.i))return;seen.add(c.i);const p=vis(c.lon,c.lat);if(!p)return;const here=c===S.cur&&!S.done,[x,y]=p,gs=34;
@@ -452,12 +458,12 @@ $('zoomWorld').onclick=()=>setView(homeView(),true);
 $('zoomFit').onclick=()=>setView(S.flights.length<=1&&!S.done?homeView():S.done?homeView():fitView(),true);
 function resultText(){const nf=S.flights.filter(f=>f.city&&!f.start).length;
   const em=S.flights.filter(f=>!f.start).map(f=>f.type==='win'?'🎯':(f.type==='name'||f.type==='both')?'🔤':f.type==='dir'?'🧭':f.text.startsWith('Gave')?'🏳️':'💡').join('');
-  return`Goose Chase: International · ${S.mode==='daily'?new Date().toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):'random puzzle'} 🌍\n${S.won?`Found it in ${nf} flight${nf===1?'':'s'}`:'Gave up'} · ${fmt(S.miss)} mi total miss · ${acc()}% accuracy\n${em}`}
+  return`Goose Chase: International · ${S.mode==='daily'?new Date().toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):'random puzzle'} 🌍\n${S.won?`Found it in ${nf} flight${nf===1?'':'s'}`:'Gave up'} · ${fmt(S.miss)} mi total miss · ${fmt(S.dev)} mi off route · ${acc()}% accuracy\n${em}`}
 const RESP='https://docs.google.com/forms/d/e/1FAIpQLSeNNFuxrrusxPDy1lIKeU0oxVqc325ybY0m5FUUC8ClbfaymQ/formResponse?submit=Submit',GAME='World',PFX='fp-';
 function chk(t){let h=5381;for(const c of t+'|fp-salt-7q')h=((h<<5)+h+c.charCodeAt(0))>>>0;return h.toString(36).slice(-4).toUpperCase()}
-function myRow(){return{a:acc(),m:Math.round(S.miss),f:S.flights.filter(f=>f.city&&!f.start).length,h:S.hints.filter(h=>h!=='giveup').length}}
+function myRow(){return{a:acc(),m:Math.round(S.miss),d:Math.round(S.dev),f:S.flights.filter(f=>f.city&&!f.start).length,h:S.hints.filter(h=>h!=='giveup').length}}
 function scoreLine(id){const r=myRow();
-  const base=`${GAME} v2 ${S.mode==='daily'?'':'Random '}#${S.seed} · ${new Date().toLocaleDateString('en-CA')} · ${r.a}% accuracy · ${fmt(r.m)} mi total miss · ${r.f} flight${r.f===1?'':'s'} · ${r.h} hint${r.h===1?'':'s'}`;
+  const base=`${GAME} v3 ${S.mode==='daily'?'':'Random '}#${S.seed} · ${new Date().toLocaleDateString('en-CA')} · ${r.a}% accuracy · ${fmt(r.m)} mi total miss · ${fmt(r.d)} mi off route · ${r.f} flight${r.f===1?'':'s'} · ${r.h} hint${r.h===1?'':'s'}`;
   return base+' · code '+chk(base)+(id?' · id '+id:'')}
 const better=(x,y)=>x.a!==y.a?x.a>y.a:x.f!==y.f?x.f<y.f:x.h!==y.h?x.h<y.h:x.m<y.m;
 const sortB=a=>a.sort((x,y)=>better(x,y)?-1:better(y,x)?1:0);
@@ -473,7 +479,7 @@ function parseCSV(t){const rows=[];let row=[],f='',q=false;for(let i=0;i<t.lengt
   if(q){if(c==='"'){if(t[i+1]==='"'){f+='"';i++}else q=false}else f+=c}
   else if(c==='"')q=true;else if(c===','){row.push(f);f=''}else if(c==='\n'){row.push(f);rows.push(row);row=[];f=''}else if(c!=='\r')f+=c}
   if(f||row.length){row.push(f);rows.push(row)}return rows}
-const RX=/^(World|USA) v2 (Random )?#(\d+) · (\d{4}-\d\d-\d\d) · (\d+)% accuracy · ([\d,]+) mi total miss · (\d+) flights? · (\d+) hints? · code (\w{4})(?: · id (\w+))?$/;
+const RX=/^(World|USA) v3 (Random )?#(\d+) · (\d{4}-\d\d-\d\d) · (\d+)% accuracy · ([\d,]+) mi total miss · (?:[\d,]+ mi off route · )?(\d+) flights? · (\d+) hints? · code (\w{4})(?: · id (\w+))?$/;
 let boardStatus='idle';
 async function loadBoard(){boardStatus='loading';
   try{const r=await fetch(SHEET_CSV+'&t='+Date.now());if(!r.ok)throw 0;const rows=parseCSV(await r.text()).slice(1);
@@ -490,7 +496,7 @@ async function loadBoard(){boardStatus='loading';
     const rTop=sortB(ents.random.slice());
     window.BOARDS={daily:{key:bkey('daily'),top:sortB(dTop).slice(0,5)},random:{key:bkey('random'),top:rTop.slice(0,5)}};boardStatus='ok'}catch(e){boardStatus='error'}}
 function updSubmit(){}
-const entryKey=()=>S.mode==='daily'?PFX+'entry2-'+S.seed:PFX+'rentry2-'+S.seed;
+const entryKey=()=>S.mode==='daily'?PFX+'entry3-'+S.seed:PFX+'rentry3-'+S.seed;
 async function postScore(name,id){await fetch(POST_URL,{method:'POST',mode:'no-cors',body:new URLSearchParams({'entry.1420984043':name,'entry.927338116':scoreLine(id)})})}
 async function autoSubmit(){if(!S.won||store.get(entryKey())||!qualifies())return;
   const id=Math.random().toString(36).slice(2,10),name=store.get('fp-name')||'Anonymous';
@@ -519,7 +525,7 @@ function renderBoard(){const me=myRow(),en=S.won?store.get(entryKey()):null,cur=
 function showEnd(){const nf=S.flights.filter(f=>f.city&&!f.start).length;
   $('endTitle').textContent=S.won?'You found it! 🎯':'So close…';
   $('endSub').innerHTML=`The mystery city was <b>${S.target.name}</b>, ${S.target.country}.`;
-  $('eF').textContent=nf;$('eD').textContent=fmt(S.miss);$('eA').textContent=acc()+'%';const nh=S.hints.filter(h=>h!=='giveup').length;if(nh)$('endSub').innerHTML+=` Hints used: ${nh}.`;
+  $('eF').textContent=nf;$('eD').textContent=fmt(S.miss);$('eR').textContent=fmt(S.dev);$('eA').textContent=acc()+'%';const nh=S.hints.filter(h=>h!=='giveup').length;if(nh)$('endSub').innerHTML+=` Hints used: ${nh}.`;
   const st=store.get('fp-stats2');$('eStreak').textContent=S.mode==='daily'&&st?`Daily puzzles played: ${st.played} · Solved: ${st.wins} · Current streak: ${st.streak}`:'';
   $('copyBtn').textContent='Copy result';$('lbBox').style.display='block';$('submitBox').style.display='none';{$('pname').value='';$('subNote').textContent='Your score is already on the board. Adding a name is optional.';$('submitLink').disabled=false;$('submitLink').textContent='Save name';renderBoard();loadBoard().then(()=>{renderBoard();autoSubmit()})}$('endOv').classList.add('open')}
 document.addEventListener('keydown',e=>{if(e.key!=='Enter'||e.repeat||!S||!S.done)return;if(e.target.closest&&e.target.closest('button,a,input'))return;if($('howOv').classList.contains('open'))return;e.preventDefault();$('endOv').classList.remove('open');newGame('random',Math.floor(Math.random()*1e9));setTimeout(()=>$('q').focus(),50)});
